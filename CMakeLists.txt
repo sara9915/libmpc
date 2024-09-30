@@ -7,7 +7,15 @@ project(mpc++ VERSION ${LIBMPCC_VERSION} LANGUAGES CXX)
 set(USE_SHOW_STACKTRACE false)
 
 # Disabling Eigen stack allocation warning
-add_definitions(-DEIGEN_STACK_ALLOCATION_LIMIT=0)
+add_definitions(-DEIGEN_STACK_ALLOCATION_LIMIT=0) # = 0
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+
+if(NOT CMAKE_BUILD_TYPE)
+  message("RELEASE BUILD")
+ set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
 
 ## Load CMAKE configuration from environment variables
 set(CMAKE_MODULE_PATH $ENV{CMAKE_MODULE_PATH})
@@ -51,9 +59,19 @@ else()
     message(FATAL_ERROR "Could not locate NLopt")
 endif()
 
+# Find libode library
+find_package(ode REQUIRED)
+if(ode_FOUND)
+    message(STATUS "Found ODE")
+    message(STATUS "ODE include dir: ${ODE_INCLUDE_DIRS}")
+    message(STATUS "ODE library dir: ${ODE_LIBRARIES}")
+else()
+    message(FATAL_ERROR "Could not locate ODE")
+endif()
+
 # Include the external libraries to the project
 # This is necessary to include the headers of the external libraries
-set(EXTERN_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIRS} ${OSQP_INCLUDE_DIR} ${NLOPT_INCLUDE_DIRS}) 
+set(EXTERN_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIRS} ${OSQP_INCLUDE_DIR} ${NLOPT_INCLUDE_DIRS} ${ODE_INCLUDE_DIRS}) 
 
 include_directories(${EXTERN_INCLUDE_DIRS} "include")
 
@@ -73,7 +91,8 @@ file(GLOB MPC_HEADERS "${MPC_INCLUDE_DIR}/*")
 add_library(mpc++ INTERFACE)
 target_sources(mpc++ INTERFACE ${MPC_HEADERS})
 target_include_directories(mpc++ INTERFACE ${EXTERN_INCLUDE_DIRS})
-target_link_libraries(mpc++ INTERFACE ${NLOPT_LIBRARIES} m osqp::osqp)
+target_link_libraries(mpc++ INTERFACE ${NLOPT_LIBRARIES} m osqp::osqp) 
+target_link_libraries(mpc++ INTERFACE ode::ode)
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
