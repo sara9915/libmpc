@@ -56,11 +56,11 @@ namespace mpc
          */
         void onInit() override
         {
-            COND_RESIZE_CVEC(sizer,x0, nx());
-            COND_RESIZE_MAT(sizer,Xmat, (ph() + 1), nx());
-            COND_RESIZE_MAT(sizer,Umat, (ph() + 1), nu());
-            COND_RESIZE_MAT(sizer,Jx, nx(), ph());
-            COND_RESIZE_MAT(sizer,Jmv, nu(), ph());
+            COND_RESIZE_CVEC(sizer, x0, nx());
+            COND_RESIZE_MAT(sizer, Xmat, (ph() + 1), nx());
+            COND_RESIZE_MAT(sizer, Umat, (ph() + 1), nu());
+            COND_RESIZE_MAT(sizer, Jx, nx(), ph());
+            COND_RESIZE_MAT(sizer, Jmv, nu(), ph());
 
             Je = 0;
         }
@@ -93,11 +93,10 @@ namespace mpc
             checkOrQuit();
 
             Cost c;
-            COND_RESIZE_CVEC(sizer,c.grad, ((ph() * nx()) + (nu() * ch()) + 1));
+            COND_RESIZE_CVEC(sizer, c.grad, ((ph() * nx()) + (nu() * ch()) + 1));
 
             mapping->unwrapVector(x, x0, Xmat, Umat, e);
             c.value = fuser(Xmat, model->getOutput(Xmat, Umat), Umat, e);
-
             if (hasGradient)
             {
                 computeJacobian(Xmat, Umat, c.value, e);
@@ -119,7 +118,7 @@ namespace mpc
                 }
 
                 cvec<(sizer.ph * sizer.nu)> JmvVectorized;
-                COND_RESIZE_CVEC(sizer,JmvVectorized, (ph() * nu()));
+                COND_RESIZE_CVEC(sizer, JmvVectorized, (ph() * nu()));
 
                 int vec_counter = 0;
                 // #pragma omp parallel for
@@ -167,7 +166,6 @@ namespace mpc
                     << c.grad
                     << std::endl;
             }
-
             // debug information
             niteration++;
 

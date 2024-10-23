@@ -411,7 +411,6 @@ namespace mpc
             const cvec<sizer.nu> &u0) override
         {
             checkOrQuit();
-
             Result<sizer.nu> r;
 
             std::vector<double> optX0;
