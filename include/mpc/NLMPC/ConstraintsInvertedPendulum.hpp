@@ -8,7 +8,8 @@
 #include <InvertedPendulum.h>
 #include "ode_euler.h"
 #include "ode_trapz.h"
-#include "ode_trapz.h"
+#include "ode_grk4a.h"
+
 using namespace ode;
 namespace mpc
 {
@@ -52,11 +53,11 @@ namespace mpc
             cvec<(Tcon * ((sizer.ph * sizer.nx) + (sizer.nu * sizer.ch) + 1))> grad;
         };
         bool custom_integrator;
-        std::shared_ptr<uclv_pushing::InvertedPendulum<OdeTrapz>> sys;
+        std::shared_ptr<uclv_pushing::InvertedPendulum<OdeGRK4A>> sys;
 
         Constraints() : Base<sizer>()
         {
-            sys = std::make_shared<uclv_pushing::InvertedPendulum<OdeTrapz>>();
+            sys = std::make_shared<uclv_pushing::InvertedPendulum<OdeGRK4A>>();
             sys->set_name("inverted_pendulum");
 
             // physical parameters
@@ -75,25 +76,6 @@ namespace mpc
 
             // controller variables
             sys->u = 0.0;
-        }
-
-        std::vector<double> StateEqInvertedPendulum(std::vector<double> x,
-                                                double u)
-        {
-            std::cout << "StateEqInvertedPendulum" << std::endl;
-            double den = sys->I * (sys->M + sys->m) + sys->M * sys->m * pow(sys->l, 2);
-
-            std::vector<double> dx;
-            dx.resize(4);
-
-            // x = [x, xdot, theta, thetadot]
-            dx[0] = x[1];
-            dx[1] = -((sys->I + sys->m * sys->l * sys->l) * sys->b * x[1]) / den + (pow(sys->m, 2) * sys->g * pow(sys->l, 2) * x[2]) / den +
-                    ((sys->I + sys->m * pow(sys->l, 2)) / den) * u;
-            dx[2] = x[3];
-            dx[3] = -((sys->m * sys->l * sys->b * x[1]) / den) + ((sys->M + sys->m) * sys->m * sys->g * sys->l * x[2]) / den + (sys->m * sys->l * u) / den;
-
-            return dx;
         }
 
         ~Constraints() = default;
@@ -565,10 +547,11 @@ namespace mpc
             if (model->isContinuousTime)
             {
                 Logger::instance().log(Logger::log_type::DETAIL) << "Continuous time model detected, using finite differences" << std::endl;
-
+                std::cout << "\n\n" << std::endl;
                 // #pragma omp parallel for
                 for (size_t i = 0; i < ph(); i++)
                 {
+                    std::cout << "############### i: " << i << std::endl;
                     cvec<sizer.nu> uk;
                     uk = Umat.row(i).transpose();
 
@@ -608,16 +591,16 @@ namespace mpc
 
                     sys->u = uk[0];
 
-                    sys->solve_fixed(model->sampleTime, model->sampleTime/10.0);
+                    sys->solve_adaptive(model->sampleTime, model->sampleTime/10.0);
 
                     for (int i = 0; i < sizer.nx; i++)
                     {
                         x_current[i] = sys->get_sol(i);
                         // std::cout << "x_current[" << i << "]: " << x_current[i] << std::endl;
                     }
-
-                    // std::cout << "xk_bar: " << xk_bar << std::endl;
-                    // std::cout << "xk1: " << xk1 << std::endl;
+                    // std::cout << "X: " << Xmat << std::endl;
+                    std::cout << "xk_bar: " << xk_bar << std::endl;
+                    // std::cout << "xk: " << xk << std::endl;
 
                     // Transform x_current into xk_bar type
                     for (int i = 0; i < sizer.nx; i++)

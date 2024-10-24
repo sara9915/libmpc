@@ -499,6 +499,11 @@ namespace mpc
             try
             {
                 std::vector<double> opt_v = innerOpt->optimize(optX0);
+                // std::cout << "Optimization vector (opt_v): " << std::endl;
+                // for (const auto &val : opt_v)
+                // {
+                //     std::cout << val << " ";
+                // }
                 // convert from std vector to eigen vector by copying the data
                 Eigen::Map<cvec<((sizer.ph * sizer.nx) + (sizer.nu * sizer.ch) + 1)>>(opt_v.data(), opt_v.size()).swap(opt_vector);
                 optimizationSuccess = true;

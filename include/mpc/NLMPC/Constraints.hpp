@@ -8,6 +8,8 @@
 #include <DynamicPusherSliderSimulator.h>
 #include "ode_euler.h"
 #include "ode_grk4a.h"
+#include "ode_rkf_32.h"
+#include "ode_sdirk_43.h"
 
 #include "ode_trapz.h"
 using namespace ode;
@@ -585,27 +587,24 @@ namespace mpc
                     for(int i = 0; i < sizer.nx; i++)
                         sys->set_sol(i,xk[i]);
 
-                    // std::cout << "xk: " << xk << std::endl;
-                    // std::cout << "uk: " << uk << std::endl;
-
                     sys->u_n = uk[0];
                     sys->u_t = uk[1];
 
-                    sys->solve_adaptive(model->sampleTime, model->sampleTime);
+
+                    sys->solve_adaptive(model->sampleTime, model->sampleTime/10);
 
                     for (int i = 0; i < sizer.nx; i++)
                     {
                         x_current[i] = sys->get_sol(i);
                         // std::cout << "x_current[" << i << "]: " << x_current[i] << std::endl;
                     }
-                    // std::cout << "xk1: " << xk1 << std::endl;
+                    
 
                     // Transform x_current into xk_bar type
                     for (int i = 0; i < sizer.nx; i++)
                     {
                         xk_bar[i] = x_current[i];
                     }
-                    
 
                     ceq.middleRows(ic, nx()) = xk_bar - xk1; 
                     // ceq.middleRows(ic, nx()) = xk + model->sampleTime*fk - xk1; // xk + (h * (fk + fk1)) - xk1;
