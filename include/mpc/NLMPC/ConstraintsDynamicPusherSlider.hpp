@@ -5,7 +5,14 @@
 #pragma once
 
 #include <mpc/NLMPC/Base.hpp>
+#include <DynamicPusherSliderSimulator.h>
+#include "ode_euler.h"
+#include "ode_grk4a.h"
+#include "ode_rkf_32.h"
+#include "ode_sdirk_43.h"
 
+#include "ode_trapz.h"
+using namespace ode;
 namespace mpc
 {
     /**
@@ -48,9 +55,26 @@ namespace mpc
             cvec<(Tcon * ((sizer.ph * sizer.nx) + (sizer.nu * sizer.ch) + 1))> grad;
         };
         bool custom_integrator;
+        std::shared_ptr<uclv_pushing::DynamicPusherSliderSimulator<OdeGRK4A>> sys;
 
         Constraints() : Base<sizer>()
         {
+            sys = std::make_shared<uclv_pushing::DynamicPusherSliderSimulator<OdeGRK4A>>("resin_block");
+            sys->set_name("pusher_slider_dyn");
+
+            // physical parameters
+            sys->slider.set_mu_sg(0.15);
+
+                    // print x_current
+            for (int i = 0; i < sys->nx_; i++)
+            {
+                sys->set_sol(i, 0.0);
+            }
+            sys->set_sol(6,-0.0375);
+
+            // controller variables
+            sys->u_n = 0.0;
+            sys->u_t = 0.0;
         }
 
         ~Constraints() = default;
@@ -522,6 +546,7 @@ namespace mpc
             if (model->isContinuousTime)
             {
                 Logger::instance().log(Logger::log_type::DETAIL) << "Continuous time model detected, using finite differences" << std::endl;
+
                 // #pragma omp parallel for
                 for (size_t i = 0; i < ph(); i++)
                 {
@@ -542,7 +567,47 @@ namespace mpc
                     model->vectorField(fk, xk, uk, i);
                     model->vectorField(fk1, xk1, uk, i);
 
-                    ceq.middleRows(ic, nx()) = xk + (h * (fk + fk1)) - xk1;
+                    // ################## SUBSAMPLE CODE ##################
+                    double Ts_bar = model->sampleTime/1.0; //0.0001;
+
+                    cvec<sizer.nx> xk_bar;
+                    // xk_bar = xk;
+                    cvec<sizer.nx> fk_bar;
+                    COND_RESIZE_CVEC(sizer, fk_bar, nx());
+                    
+                    double ts_= 0.0;
+                    double x_current[sys->nx_];
+                    
+                    // while(ts_ < model->sampleTime)
+                    // {
+                    //     model->vectorField(fk_bar, xk_bar, uk, i);
+                    //     xk_bar = xk_bar + Ts_bar * fk_bar;
+                    //     ts_ += Ts_bar;
+                    // }
+                    for(int i = 0; i < sizer.nx; i++)
+                        sys->set_sol(i,xk[i]);
+
+                    sys->u_n = uk[0];
+                    sys->u_t = uk[1];
+
+
+                    sys->solve_adaptive(model->sampleTime, model->sampleTime/10);
+
+                    for (int i = 0; i < sizer.nx; i++)
+                    {
+                        x_current[i] = sys->get_sol(i);
+                        // std::cout << "x_current[" << i << "]: " << x_current[i] << std::endl;
+                    }
+                    
+
+                    // Transform x_current into xk_bar type
+                    for (int i = 0; i < sizer.nx; i++)
+                    {
+                        xk_bar[i] = x_current[i];
+                    }
+
+                    ceq.middleRows(ic, nx()) = xk_bar - xk1; 
+                    // ceq.middleRows(ic, nx()) = xk + model->sampleTime*fk - xk1; // xk + (h * (fk + fk1)) - xk1;
                     ceq.middleRows(ic, nx()) = ceq.middleRows(ic, nx()).array() / mapping->StateScaling().array();
 
                     if (hasGradient)

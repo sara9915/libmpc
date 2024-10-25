@@ -547,11 +547,11 @@ namespace mpc
             if (model->isContinuousTime)
             {
                 Logger::instance().log(Logger::log_type::DETAIL) << "Continuous time model detected, using finite differences" << std::endl;
-                std::cout << "\n\n" << std::endl;
+                // std::cout << "\n\n" << std::endl;
                 // #pragma omp parallel for
                 for (size_t i = 0; i < ph(); i++)
                 {
-                    std::cout << "############### i: " << i << std::endl;
+                    // std::cout << "############### i: " << i << std::endl;
                     cvec<sizer.nu> uk;
                     uk = Umat.row(i).transpose();
 
@@ -599,7 +599,7 @@ namespace mpc
                         // std::cout << "x_current[" << i << "]: " << x_current[i] << std::endl;
                     }
                     // std::cout << "X: " << Xmat << std::endl;
-                    std::cout << "xk_bar: " << xk_bar << std::endl;
+                    // std::cout << "xk_bar: " << xk_bar << std::endl;
                     // std::cout << "xk: " << xk << std::endl;
 
                     // Transform x_current into xk_bar type
